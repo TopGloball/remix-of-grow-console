@@ -25,6 +25,9 @@ export function PlantCard({ plant }: PlantCardProps) {
               {plant.cultivar.name}
             </p>
           )}
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {plant.growName}
+          </p>
         </div>
         <StatusBadge status={plant.status} />
       </div>
