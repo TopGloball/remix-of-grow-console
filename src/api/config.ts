@@ -3,7 +3,8 @@
 
 import { appConfig } from '@/config/app';
 
-export const API_BASE_URL = appConfig.apiBaseUrl;
+// Ensure API_BASE_URL is absolute (no trailing slash)
+export const API_BASE_URL = appConfig.apiBaseUrl.replace(/\/$/, '');
 
 export const API_ENDPOINTS = {
   // Auth endpoints
