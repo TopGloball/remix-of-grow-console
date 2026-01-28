@@ -2,116 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Grow App Design System
-   Clean, neutral, agricultural aesthetic
+/* GrowSmart Design System - Dark Theme
+   Mobile-first, professional grow app
    All colors in HSL
 */
 
 @layer base {
   :root {
-    /* Core backgrounds */
-    --background: 40 20% 97%;
-    --foreground: 30 10% 15%;
+    /* Force dark mode */
+    color-scheme: dark;
+    
+    /* Core backgrounds - Deep dark green-tinted */
+    --background: 160 15% 6%;
+    --foreground: 120 10% 90%;
 
-    /* Card surfaces */
-    --card: 0 0% 100%;
-    --card-foreground: 30 10% 15%;
-    --card-hover: 40 15% 95%;
+    /* Card surfaces - Slightly lighter with green tint */
+    --card: 160 12% 10%;
+    --card-foreground: 120 10% 90%;
+    --card-hover: 160 12% 13%;
 
-    /* Popovers/Dropdowns */
-    --popover: 0 0% 100%;
-    --popover-foreground: 30 10% 15%;
+    /* Popovers/Dropdowns/Modals */
+    --popover: 160 12% 12%;
+    --popover-foreground: 120 10% 90%;
 
-    /* Primary - Muted forest green */
-    --primary: 145 30% 32%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary - Vibrant green */
+    --primary: 145 55% 42%;
+    --primary-foreground: 160 15% 6%;
 
-    /* Secondary - Warm cream */
-    --secondary: 40 30% 94%;
-    --secondary-foreground: 30 10% 20%;
+    /* Secondary - Muted green surface */
+    --secondary: 160 10% 15%;
+    --secondary-foreground: 120 10% 85%;
 
-    /* Muted - Subtle gray */
-    --muted: 40 15% 92%;
-    --muted-foreground: 30 8% 50%;
+    /* Muted - Subtle gray-green */
+    --muted: 160 8% 18%;
+    --muted-foreground: 120 5% 55%;
 
-    /* Accent - Warm amber for recommendations */
-    --accent: 35 85% 50%;
-    --accent-foreground: 30 10% 15%;
+    /* Accent - Emerald highlight */
+    --accent: 145 50% 35%;
+    --accent-foreground: 0 0% 100%;
 
     /* Destructive */
-    --destructive: 0 70% 50%;
+    --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
+
+    /* Warning */
+    --warning: 45 90% 55%;
+    --warning-foreground: 30 10% 10%;
+
+    /* Info */
+    --info: 200 70% 50%;
+    --info-foreground: 0 0% 100%;
 
     /* Borders and inputs */
-    --border: 40 15% 88%;
-    --input: 40 15% 88%;
-    --ring: 145 30% 32%;
+    --border: 160 10% 18%;
+    --input: 160 10% 14%;
+    --ring: 145 55% 42%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     /* Status colors */
-    --status-active: 145 50% 40%;
-    --status-frozen: 210 30% 50%;
-    --status-completed: 30 8% 55%;
+    --status-active: 145 50% 45%;
+    --status-frozen: 210 35% 50%;
+    --status-completed: 160 10% 45%;
 
     /* Stage indicator */
-    --stage: 145 25% 45%;
+    --stage: 145 40% 50%;
 
-    /* Sidebar (if used) */
-    --sidebar-background: 40 20% 95%;
-    --sidebar-foreground: 30 10% 25%;
-    --sidebar-primary: 145 30% 32%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 40 20% 90%;
-    --sidebar-accent-foreground: 30 10% 20%;
-    --sidebar-border: 40 15% 85%;
-    --sidebar-ring: 145 30% 32%;
-  }
-
-  .dark {
-    --background: 30 10% 10%;
-    --foreground: 40 20% 92%;
-
-    --card: 30 10% 13%;
-    --card-foreground: 40 20% 92%;
-    --card-hover: 30 10% 16%;
-
-    --popover: 30 10% 13%;
-    --popover-foreground: 40 20% 92%;
-
-    --primary: 145 35% 45%;
-    --primary-foreground: 30 10% 10%;
-
-    --secondary: 30 10% 18%;
-    --secondary-foreground: 40 20% 90%;
-
-    --muted: 30 10% 18%;
-    --muted-foreground: 40 10% 55%;
-
-    --accent: 35 80% 55%;
-    --accent-foreground: 30 10% 10%;
-
-    --destructive: 0 65% 45%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 30 10% 20%;
-    --input: 30 10% 20%;
-    --ring: 145 35% 45%;
-
-    --status-active: 145 45% 50%;
-    --status-frozen: 210 35% 55%;
-    --status-completed: 30 10% 50%;
-
-    --stage: 145 30% 55%;
-
-    --sidebar-background: 30 10% 8%;
-    --sidebar-foreground: 40 20% 90%;
-    --sidebar-primary: 145 35% 45%;
-    --sidebar-primary-foreground: 30 10% 10%;
-    --sidebar-accent: 30 10% 15%;
-    --sidebar-accent-foreground: 40 20% 90%;
-    --sidebar-border: 30 10% 18%;
-    --sidebar-ring: 145 35% 45%;
+    /* Sidebar */
+    --sidebar-background: 160 15% 5%;
+    --sidebar-foreground: 120 10% 90%;
+    --sidebar-primary: 145 55% 42%;
+    --sidebar-primary-foreground: 160 15% 6%;
+    --sidebar-accent: 160 10% 12%;
+    --sidebar-accent-foreground: 120 10% 90%;
+    --sidebar-border: 160 10% 15%;
+    --sidebar-ring: 145 55% 42%;
   }
 }
 
@@ -120,8 +85,101 @@
     @apply border-border;
   }
 
+  html {
+    @apply bg-background;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    min-height: 100vh;
+    min-height: 100dvh;
   }
+}
+
+@layer components {
+  /* Glass card effect */
+  .glass-card {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl;
+  }
+
+  /* Pill/Tag styles */
+  .pill {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full;
+  }
+
+  .pill-primary {
+    @apply bg-primary/20 text-primary;
+  }
+
+  .pill-warning {
+    @apply bg-warning/20 text-warning;
+  }
+
+  .pill-info {
+    @apply bg-info/20 text-info;
+  }
+
+  .pill-muted {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  /* Task/Action row */
+  .task-row {
+    @apply flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors;
+  }
+
+  /* Segmented control */
+  .segment-group {
+    @apply flex gap-2 flex-wrap;
+  }
+
+  .segment-button {
+    @apply flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-border bg-muted/30 text-sm font-medium transition-all;
+  }
+
+  .segment-button[data-active="true"] {
+    @apply bg-primary/20 border-primary text-primary;
+  }
+
+  /* Form field */
+  .form-field {
+    @apply space-y-2;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-foreground;
+  }
+
+  .form-input {
+    @apply w-full px-4 py-3 rounded-lg bg-input border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all;
+  }
+
+  /* Catalog card */
+  .catalog-card {
+    @apply p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer;
+  }
+
+  .catalog-card[data-selected="true"] {
+    @apply bg-primary/10 border-primary;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
 }
