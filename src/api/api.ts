@@ -40,6 +40,16 @@ export function clearDebugLogs(): void {
   debugLogs.length = 0;
 }
 
+// Custom error class for auth errors
+export class AuthError extends Error {
+  status: number;
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthError';
+    this.status = 401;
+  }
+}
+
 // Helper for real API calls
 async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const fullUrl = `${API_BASE_URL}${endpoint}`;
@@ -66,7 +76,12 @@ async function apiCall<T>(endpoint: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
+    if (response.status === 401) {
+      throw new AuthError(data.message || 'Unauthorized');
+    }
+    const error = new Error(data.message || `API Error: ${response.status}`);
+    (error as any).status = response.status;
+    throw error;
   }
 
   return data;
@@ -85,10 +100,28 @@ export async function login(payload: LoginPayload): Promise<ApiResponse<User>> {
     logApiCall({ endpoint: API_ENDPOINTS.AUTH_LOGIN, method: 'POST', payload, response: { data: MOCK_USER, success: true }, timestamp: Date.now() });
     return { data: MOCK_USER, success: true };
   }
-  return apiCall<ApiResponse<User>>(API_ENDPOINTS.AUTH_LOGIN, {
+  // Backend login sets cookies and returns { ok: true }
+  await apiCall<any>(API_ENDPOINTS.AUTH_LOGIN, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+  // After successful login, get user info
+  return getMe();
+}
+
+export async function register(payload: LoginPayload): Promise<ApiResponse<User>> {
+  if (appConfig.useMockData) {
+    await delay();
+    logApiCall({ endpoint: API_ENDPOINTS.AUTH_REGISTER, method: 'POST', payload, response: { data: MOCK_USER, success: true }, timestamp: Date.now() });
+    return { data: MOCK_USER, success: true };
+  }
+  // Backend register sets cookies and returns { ok: true }
+  await apiCall<any>(API_ENDPOINTS.AUTH_REGISTER, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  // After successful registration, get user info
+  return getMe();
 }
 
 export async function getMe(): Promise<ApiResponse<User>> {
@@ -97,7 +130,12 @@ export async function getMe(): Promise<ApiResponse<User>> {
     logApiCall({ endpoint: API_ENDPOINTS.AUTH_ME, method: 'GET', response: { data: MOCK_USER, success: true }, timestamp: Date.now() });
     return { data: MOCK_USER, success: true };
   }
-  return apiCall<ApiResponse<User>>(API_ENDPOINTS.AUTH_ME);
+  const response = await apiCall<any>(API_ENDPOINTS.AUTH_ME);
+  // Backend returns { ok: true, user: {...} }
+  if (response.user) {
+    return { data: response.user, success: true };
+  }
+  return { data: response, success: true };
 }
 
 // ============ GROWS ============
@@ -151,10 +189,14 @@ export async function createPlant(payload: CreatePlantPayload): Promise<ApiRespo
     logApiCall({ endpoint: API_ENDPOINTS.PLANTS_CREATE, method: 'POST', payload, response: { data: newPlant, success: true }, timestamp: Date.now() });
     return { data: newPlant, success: true };
   }
-  return apiCall<ApiResponse<Plant>>(API_ENDPOINTS.PLANTS_CREATE, {
+  // Backend returns { plantId: string } on success
+  const response = await apiCall<{ plantId: string }>(API_ENDPOINTS.PLANTS_CREATE, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+  // Fetch the created plant detail to return full Plant object
+  const plantDetail = await getPlantDetail(response.plantId);
+  return { data: plantDetail.data as any, success: true };
 }
 
 export async function getPlantsDashboard(): Promise<ApiResponse<PlantDashboardItem[]>> {
@@ -247,6 +289,12 @@ export async function getCultivars(): Promise<ApiResponse<Cultivar[]>> {
     await delay(200);
     return { data: MOCK_CULTIVARS, success: true };
   }
-  // In real API, this might be a separate endpoint or embedded in another response
-  return apiCall<ApiResponse<Cultivar[]>>('/api/v1/cultivars');
+  // Backend endpoint: GET /api/v1/plant-database/cannabis
+  // Returns: { items: [{ id, key, name, photoperiodType }] }
+  const response = await apiCall<{ items: Array<{ id: string; key: string; name: string; photoperiodType: string }> }>('/api/v1/plant-database/cannabis');
+  const cultivars: Cultivar[] = response.items.map(item => ({
+    id: item.id,
+    name: item.name,
+  }));
+  return { data: cultivars, success: true };
 }

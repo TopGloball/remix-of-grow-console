@@ -9,6 +9,7 @@ export const API_BASE_URL = appConfig.apiBaseUrl.replace(/\/$/, '');
 export const API_ENDPOINTS = {
   // Auth endpoints
   AUTH_LOGIN: '/api/v2/auth/login',
+  AUTH_REGISTER: '/api/v2/auth/register',
   AUTH_ME: '/api/v2/auth/me',
   
   // Grow endpoints

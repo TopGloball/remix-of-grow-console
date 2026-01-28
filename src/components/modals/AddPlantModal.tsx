@@ -20,6 +20,8 @@ import {
 import { CatalogPickerModal } from './CatalogPickerModal';
 import { usePlantStore, type CatalogItem } from '@/store/plantStore';
 import { useToast } from '@/hooks/use-toast';
+import { createPlant, getGrows } from '@/api/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 interface AddPlantModalProps {
   open: boolean;
@@ -30,14 +32,26 @@ type TabType = 'catalog' | 'manual';
 
 export function AddPlantModal({ open, onOpenChange }: AddPlantModalProps) {
   const { toast } = useToast();
-  const { addPlant } = usePlantStore();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<TabType>('catalog');
   const [catalogPickerOpen, setCatalogPickerOpen] = useState(false);
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogItem | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Fetch grows for plant creation
+  const { data: growsResponse } = useQuery({
+    queryKey: ['grows'],
+    queryFn: () => getGrows(),
+    enabled: open,
+  });
+
+  const grows = growsResponse?.data || [];
+  const defaultGrowId = grows.length > 0 ? grows[0].id : undefined;
 
   // Form state
   const [name, setName] = useState('');
   const [cultivar, setCultivar] = useState('');
+  const [cultivarId, setCultivarId] = useState<string | undefined>(undefined);
   const [type, setType] = useState<'indoor' | 'outdoor' | 'greenhouse'>('indoor');
   const [stage, setStage] = useState<'seedling' | 'vegetative' | 'flowering' | 'harvest' | 'curing'>('seedling');
   const [expectedHarvest, setExpectedHarvest] = useState('');
@@ -47,9 +61,13 @@ export function AddPlantModal({ open, onOpenChange }: AddPlantModalProps) {
     setSelectedCatalog(item);
     setName(item.name);
     setCultivar(item.name);
+    // If item has an ID from API, use it
+    if ((item as any).id) {
+      setCultivarId((item as any).id);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim()) {
@@ -61,31 +79,59 @@ export function AddPlantModal({ open, onOpenChange }: AddPlantModalProps) {
       return;
     }
 
-    addPlant({
-      name: name.trim(),
-      cultivar: cultivar || name.trim(),
-      category: selectedCatalog?.category || 'cannabis-photo',
-      type,
-      stage,
-      expectedHarvest: expectedHarvest || null,
-      notes,
-      recommendation: 'Наблюдайте за ростом первые дни',
-    });
+    if (!defaultGrowId) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не найден активный grow. Создайте grow сначала.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    toast({
-      title: 'Растение добавлено',
-      description: `${name} успешно добавлено в список`,
-    });
+    setSubmitting(true);
+    try {
+      const payload = {
+        growId: defaultGrowId,
+        name: name.trim(),
+        cultivarId: cultivarId,
+        strain: cultivar || name.trim(),
+        startDate: new Date().toISOString().split('T')[0] + 'T00:00:00.000Z',
+        plantProfile: {
+          growMode: type === 'indoor' ? 'indoor' : type === 'outdoor' ? 'outdoor' : 'greenhouse',
+          notes: notes.trim() || undefined,
+        },
+      };
 
-    // Reset form
-    onOpenChange(false);
-    setSelectedCatalog(null);
-    setName('');
-    setCultivar('');
-    setType('indoor');
-    setStage('seedling');
-    setExpectedHarvest('');
-    setNotes('');
+      await createPlant(payload);
+
+      // Invalidate and refetch plants dashboard
+      await queryClient.invalidateQueries({ queryKey: ['plants', 'dashboard'] });
+
+      toast({
+        title: 'Растение добавлено',
+        description: `${name} успешно добавлено в список`,
+      });
+
+      // Reset form
+      onOpenChange(false);
+      setSelectedCatalog(null);
+      setName('');
+      setCultivar('');
+      setCultivarId(undefined);
+      setType('indoor');
+      setStage('seedling');
+      setExpectedHarvest('');
+      setNotes('');
+    } catch (error: any) {
+      console.error('Failed to create plant:', error);
+      toast({
+        title: 'Ошибка',
+        description: error.message || 'Не удалось создать растение',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const isValid = name.trim().length > 0;
@@ -277,10 +323,10 @@ export function AddPlantModal({ open, onOpenChange }: AddPlantModalProps) {
             <Button
               type="submit"
               onClick={handleSubmit}
-              disabled={!isValid}
+              disabled={!isValid || submitting || !defaultGrowId}
               className="flex-1 h-12"
             >
-              Добавить
+              {submitting ? 'Добавление...' : 'Добавить'}
             </Button>
           </div>
         </DialogContent>

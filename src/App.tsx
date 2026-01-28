@@ -7,9 +7,22 @@ import { AppLayout } from "@/components/AppLayout";
 import ShellScreen from "@/pages/ShellScreen";
 import TodayScreen from "@/pages/TodayScreen";
 import PlantDetailScreen from "@/pages/PlantDetailScreen";
+import Login from "@/pages/Login";
 import NotFound from "@/pages/NotFound";
+import { AuthProvider } from "@/context/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error: any) => {
+        // Don't retry on 401 errors
+        if (error?.status === 401) return false;
+        return failureCount < 3;
+      },
+    },
+  },
+});
 
 // Wrapper components to handle outlet context
 function ShellWrapper() {
@@ -17,25 +30,28 @@ function ShellWrapper() {
 }
 
 const App = () => {
-  // Set basename for GitHub Pages
-  const basename = import.meta.env.PROD ? '/remix-of-grow-console' : '/';
+  // No basename for Railway/Vercel deployment
+  const basename = '/';
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter basename={basename}>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<ShellScreenWithContext />} />
-              <Route path="/today" element={<TodayScreen />} />
-              <Route path="/plants/:plantId" element={<PlantDetailScreen />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter basename={basename}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                <Route path="/" element={<ShellScreenWithContext />} />
+                <Route path="/today" element={<TodayScreen />} />
+                <Route path="/plants/:plantId" element={<PlantDetailScreen />} />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

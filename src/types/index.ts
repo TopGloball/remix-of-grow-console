@@ -94,7 +94,7 @@ export interface PerformActionPayload {
 export interface User {
   id: string;
   email: string;
-  name: string;
+  name?: string; // Backend doesn't return name, make it optional
 }
 
 export interface LoginPayload {

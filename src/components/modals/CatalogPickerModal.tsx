@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Search, Leaf, Carrot, Flower2, Sparkles } from 'lucide-react';
 import {
   Dialog,
@@ -8,6 +8,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { CATALOG, type CatalogItem } from '@/store/plantStore';
+import { useQuery } from '@tanstack/react-query';
+import { appConfig } from '@/config/app';
+import { API_BASE_URL } from '@/api/config';
 
 interface CatalogPickerModalProps {
   open: boolean;
@@ -31,13 +34,49 @@ export function CatalogPickerModal({
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
 
-  const filteredItems = CATALOG.filter((item) => {
+  // Fetch cultivars from API when not using mock data
+  const { data: apiCultivars, isLoading: loadingCultivars } = useQuery({
+    queryKey: ['cultivars-search', search],
+    queryFn: async () => {
+      if (appConfig.useMockData || !search.trim()) {
+        return { items: [] };
+      }
+      const response = await fetch(
+        `${API_BASE_URL}/api/v2/catalogs/cannabis-strains/search?q=${encodeURIComponent(search)}&limit=20`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) {
+        return { items: [] };
+      }
+      return response.json();
+    },
+    enabled: open && !appConfig.useMockData && search.trim().length > 0,
+  });
+
+  // Use API results if available, otherwise fall back to local CATALOG
+  const apiItems: CatalogItem[] = (apiCultivars?.items || []).map((item: any) => ({
+    id: item.id || `api-${item.displayName}`,
+    name: item.displayName || item.name,
+    description: `Цикл: ${item.cycleSummary || 'N/A'}`,
+    category: 'cannabis-photo',
+    wateringDays: 3,
+    lightHours: 18,
+    growthDays: item.cycleDays || 90,
+  }));
+
+  const localItems = CATALOG.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
     const matchesCategory =
       activeCategory === 'all' ||
       (activeCategory === 'cannabis' && item.category.startsWith('cannabis'));
     return matchesSearch && matchesCategory;
   });
+
+  const filteredItems = appConfig.useMockData || !search.trim() 
+    ? localItems 
+    : apiItems.length > 0 
+      ? apiItems 
+      : localItems;
 
   const handleSelect = (item: CatalogItem) => {
     onSelect(item);
