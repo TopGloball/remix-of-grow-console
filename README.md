@@ -1,4 +1,14 @@
-# Welcome to your Lovable project
+# Grow Console - Plant Management Application
+
+## 🌐 Live Application
+
+**Published Application**: https://topgloball.github.io/remix-of-grow-console/
+
+## 📍 Routes
+
+- `/` - Dashboard/Shell screen (overview of plants and tasks)
+- `/today` - Today screen (tasks and recommendations for today)
+- `/plants/:plantId` - Plant detail screen (detailed information about a specific plant)
 
 ## Project info
 
@@ -61,6 +71,14 @@ This project is built with:
 - Tailwind CSS
 
 ## How can I deploy this project?
+
+### GitHub Pages (Automated)
+
+The project is automatically deployed to GitHub Pages via GitHub Actions when changes are pushed to the `main` branch.
+
+**Deployment URL**: https://topgloball.github.io/remix-of-grow-console/
+
+### Manual Deployment
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 

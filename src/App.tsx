@@ -16,24 +16,29 @@ function ShellWrapper() {
   return <ShellScreen onAddPlantClick={() => {}} />;
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<ShellScreenWithContext />} />
-            <Route path="/today" element={<TodayScreen />} />
-            <Route path="/plants/:plantId" element={<PlantDetailScreen />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Set basename for GitHub Pages
+  const basename = import.meta.env.PROD ? '/remix-of-grow-console' : '/';
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter basename={basename}>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<ShellScreenWithContext />} />
+              <Route path="/today" element={<TodayScreen />} />
+              <Route path="/plants/:plantId" element={<PlantDetailScreen />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 // Component that uses outlet context
 import { useOutletContext } from 'react-router-dom';
