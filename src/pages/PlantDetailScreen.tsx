@@ -1,4 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Leaf,
@@ -12,10 +13,14 @@ import {
   ChevronDown,
   Calendar,
   MapPin,
+  AlertTriangle,
 } from 'lucide-react';
 import { usePlantStore } from '@/store/plantStore';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { getPlantDetail } from '@/api/api';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import type { PlantStage } from '@/types';
 
 const STAGE_CONFIG = {
   seedling: { label: 'Рассада', icon: Sprout, color: 'text-emerald-400', bgColor: 'bg-emerald-400' },
@@ -27,6 +32,25 @@ const STAGE_CONFIG = {
 
 const ALL_STAGES = ['seedling', 'vegetative', 'flowering', 'harvest', 'curing'] as const;
 
+// Helper to convert API stage format to UI format
+function normalizeStage(stage: PlantStage): keyof typeof STAGE_CONFIG {
+  const stageMap: Record<PlantStage, keyof typeof STAGE_CONFIG> = {
+    SEEDLING: 'seedling',
+    VEGETATIVE: 'vegetative',
+    FLOWERING: 'flowering',
+    HARVEST: 'harvest',
+    DRYING: 'curing',
+    CURING: 'curing',
+  };
+  return stageMap[stage] || 'seedling';
+}
+
+// Helper to convert UI stage format to API format for comparison
+function getStageIndex(stage: PlantStage): number {
+  const stageOrder: PlantStage[] = ['SEEDLING', 'VEGETATIVE', 'FLOWERING', 'HARVEST', 'CURING'];
+  return stageOrder.indexOf(stage);
+}
+
 const TYPE_LABELS = {
   indoor: { label: 'Домашнее', icon: MapPin },
   outdoor: { label: 'Уличное', icon: MapPin },
@@ -37,17 +61,44 @@ export default function PlantDetailScreen() {
   const { plantId } = useParams<{ plantId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { plants, tasks } = usePlantStore();
+  const { tasks } = usePlantStore();
 
-  const plant = plants.find((p) => p.id === plantId);
+  // Fetch plant detail from API
+  const {
+    data: plantResponse,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['plant', plantId],
+    queryFn: async () => {
+      if (!plantId) throw new Error('Plant ID is required');
+      const response = await getPlantDetail(plantId);
+      return response.data;
+    },
+    enabled: !!plantId,
+  });
+
+  const plant = plantResponse;
   const plantTasks = tasks.filter((t) => t.plantId === plantId && !t.completed);
 
-  if (!plant) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (isError || !plant) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Leaf className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
           <p className="text-lg font-medium text-foreground">Растение не найдено</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {error instanceof Error ? error.message : 'Не удалось загрузить данные растения'}
+          </p>
           <Link to="/" className="text-primary hover:underline mt-2 inline-block">
             Вернуться на главную
           </Link>
@@ -56,10 +107,11 @@ export default function PlantDetailScreen() {
     );
   }
 
-  const stageConfig = STAGE_CONFIG[plant.stage];
+  const normalizedStage = normalizeStage(plant.stage);
+  const stageConfig = STAGE_CONFIG[normalizedStage];
   const StageIcon = stageConfig.icon;
-  const typeConfig = TYPE_LABELS[plant.type];
-  const currentStageIndex = ALL_STAGES.indexOf(plant.stage);
+  const currentStageIndex = getStageIndex(plant.stage);
+  const plantName = plant.name || plant.cultivar.name || 'Без названия';
 
   const handleAction = (action: string) => {
     toast({
@@ -80,8 +132,8 @@ export default function PlantDetailScreen() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
-            <h1 className="font-semibold text-foreground">{plant.name}</h1>
-            <p className="text-sm text-muted-foreground">{plant.cultivar}</p>
+            <h1 className="font-semibold text-foreground">{plantName}</h1>
+            <p className="text-sm text-muted-foreground">{plant.cultivar.name}</p>
           </div>
         </div>
       </header>
@@ -91,8 +143,8 @@ export default function PlantDetailScreen() {
         <div className="flex gap-1 overflow-x-auto pb-2">
           {ALL_STAGES.map((stage, index) => {
             const config = STAGE_CONFIG[stage];
-            const isActive = stage === plant.stage;
-            const isPast = index < currentStageIndex;
+            const isActive = stage === normalizedStage;
+            const isPast = index < ALL_STAGES.indexOf(normalizedStage);
             const Icon = config.icon;
 
             return (
@@ -120,17 +172,17 @@ export default function PlantDetailScreen() {
               <Leaf className="w-8 h-8 text-primary" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-semibold text-foreground">{plant.name}</h2>
-              <p className="text-sm text-muted-foreground">{plant.cultivar}</p>
+              <h2 className="text-lg font-semibold text-foreground">{plantName}</h2>
+              <p className="text-sm text-muted-foreground">{plant.cultivar.name}</p>
               <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
-                  <typeConfig.icon className="w-3.5 h-3.5" />
-                  {typeConfig.label}
+                  <Calendar className="w-3.5 h-3.5" />
+                  Возраст: {plant.ageInDays} дн.
                 </div>
-                {plant.expectedHarvest && (
+                {plant.startDate && (
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5" />
-                    {new Date(plant.expectedHarvest).toLocaleDateString('ru-RU', {
+                    {new Date(plant.startDate).toLocaleDateString('ru-RU', {
                       day: 'numeric',
                       month: 'short',
                       year: 'numeric',
@@ -143,10 +195,10 @@ export default function PlantDetailScreen() {
         </section>
 
         {/* What Next Card */}
-        {plant.recommendation && (
+        {plant.todayRecommendation && (
           <section className="glass-card p-4 bg-primary/5 border-primary/20">
             <h3 className="font-medium text-foreground mb-2">Что дальше?</h3>
-            <p className="text-sm text-muted-foreground">{plant.recommendation}</p>
+            <p className="text-sm text-muted-foreground">{plant.todayRecommendation}</p>
           </section>
         )}
 
@@ -208,34 +260,44 @@ export default function PlantDetailScreen() {
         )}
 
         {/* History (collapsed) */}
-        <details className="glass-card">
-          <summary className="flex items-center justify-between p-4 cursor-pointer">
-            <h3 className="font-medium text-foreground">История действий</h3>
-            <ChevronDown className="w-5 h-5 text-muted-foreground" />
-          </summary>
-          <div className="px-4 pb-4 pt-0 border-t border-border">
-            <div className="space-y-3 mt-3">
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <Droplets className="w-4 h-4 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-foreground">Полив</p>
-                  <p className="text-xs text-muted-foreground">2 дня назад</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
-                  <Utensils className="w-4 h-4 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-foreground">Подкормка</p>
-                  <p className="text-xs text-muted-foreground">5 дней назад</p>
-                </div>
+        {plant.recentActions && plant.recentActions.length > 0 && (
+          <details className="glass-card">
+            <summary className="flex items-center justify-between p-4 cursor-pointer">
+              <h3 className="font-medium text-foreground">История действий</h3>
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            </summary>
+            <div className="px-4 pb-4 pt-0 border-t border-border">
+              <div className="space-y-3 mt-3">
+                {plant.recentActions.map((action) => {
+                  const isWater = action.type === 'WATER';
+                  const isFeed = action.type === 'FEED';
+                  const ActionIcon = isWater ? Droplets : isFeed ? Utensils : StickyNote;
+                  const actionLabel = isWater ? 'Полив' : isFeed ? 'Подкормка' : 'Действие';
+                  const iconColor = isWater ? 'text-blue-400' : isFeed ? 'text-amber-400' : 'text-purple-400';
+                  const bgColor = isWater ? 'bg-blue-500/20' : isFeed ? 'bg-amber-500/20' : 'bg-purple-500/20';
+                  const actionDate = new Date(action.performedAt);
+                  const daysAgo = Math.floor((Date.now() - actionDate.getTime()) / (1000 * 60 * 60 * 24));
+                  const dateLabel = daysAgo === 0 ? 'Сегодня' : daysAgo === 1 ? 'Вчера' : `${daysAgo} дня назад`;
+
+                  return (
+                    <div key={action.id} className="flex items-center gap-3 text-sm">
+                      <div className={`w-8 h-8 rounded-full ${bgColor} flex items-center justify-center`}>
+                        <ActionIcon className={`w-4 h-4 ${iconColor}`} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-foreground">{actionLabel}</p>
+                        {action.notes && (
+                          <p className="text-xs text-muted-foreground">{action.notes}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">{dateLabel}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
-        </details>
+          </details>
+        )}
       </main>
     </div>
   );

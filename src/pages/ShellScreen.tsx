@@ -1,5 +1,5 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   Leaf,
   ChevronRight,
@@ -12,6 +12,9 @@ import {
   Plus,
 } from 'lucide-react';
 import { usePlantStore } from '@/store/plantStore';
+import { getPlantsDashboard } from '@/api/api';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import type { PlantStage } from '@/types';
 
 const STAGE_CONFIG = {
   seedling: { label: 'Рассада', icon: Sprout, color: 'text-emerald-400' },
@@ -21,16 +24,72 @@ const STAGE_CONFIG = {
   curing: { label: 'Сушка', icon: Droplets, color: 'text-amber-400' },
 };
 
+// Helper to convert API stage format to UI format
+function normalizeStage(stage: PlantStage): keyof typeof STAGE_CONFIG {
+  const stageMap: Record<PlantStage, keyof typeof STAGE_CONFIG> = {
+    SEEDLING: 'seedling',
+    VEGETATIVE: 'vegetative',
+    FLOWERING: 'flowering',
+    HARVEST: 'harvest',
+    DRYING: 'curing',
+    CURING: 'curing',
+  };
+  return stageMap[stage] || 'seedling';
+}
+
 interface ShellScreenProps {
   onAddPlantClick: () => void;
 }
 
 export default function ShellScreen({ onAddPlantClick }: ShellScreenProps) {
-  const { plants, tasks } = usePlantStore();
+  const { tasks } = usePlantStore();
 
-  const activePlants = plants.filter((p) => p.stage !== 'curing');
+  // Fetch plants from API
+  const {
+    data: plantsResponse,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['plants', 'dashboard'],
+    queryFn: async () => {
+      const response = await getPlantsDashboard();
+      return response.data;
+    },
+  });
+
+  const plants = plantsResponse || [];
+  const activePlants = plants.filter((p) => {
+    const normalizedStage = normalizeStage(p.stage);
+    return normalizedStage !== 'curing' && p.status === 'ACTIVE';
+  });
   const todayTasks = tasks.filter((t) => t.dueDate === 'today' && !t.completed);
-  const upcomingTasks = tasks.filter((t) => !t.completed);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <section className="glass-card p-4">
+          <LoadingSpinner />
+        </section>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-4">
+        <section className="glass-card p-4">
+          <div className="text-center py-8 text-muted-foreground">
+            <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p className="font-medium text-foreground">Ошибка загрузки данных</p>
+            <p className="text-sm mt-1">
+              {error instanceof Error ? error.message : 'Не удалось загрузить растения'}
+            </p>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -110,8 +169,10 @@ export default function ShellScreen({ onAddPlantClick }: ShellScreenProps) {
             </div>
           ) : (
             plants.map((plant) => {
-              const stageConfig = STAGE_CONFIG[plant.stage];
+              const normalizedStage = normalizeStage(plant.stage);
+              const stageConfig = STAGE_CONFIG[normalizedStage];
               const StageIcon = stageConfig.icon;
+              const plantName = plant.name || plant.cultivar.name || 'Без названия';
 
               return (
                 <Link
@@ -126,9 +187,9 @@ export default function ShellScreen({ onAddPlantClick }: ShellScreenProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-foreground">
-                          {plant.name}
+                          {plantName}
                         </span>
-                        <span className="pill pill-muted">{plant.cultivar}</span>
+                        <span className="pill pill-muted">{plant.cultivar.name}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <StageIcon className={`w-4 h-4 ${stageConfig.color}`} />
@@ -136,9 +197,9 @@ export default function ShellScreen({ onAddPlantClick }: ShellScreenProps) {
                           {stageConfig.label}
                         </span>
                       </div>
-                      {plant.recommendation && (
+                      {plant.todayRecommendation && (
                         <p className="text-sm text-muted-foreground mt-2 line-clamp-1">
-                          💡 {plant.recommendation}
+                          💡 {plant.todayRecommendation}
                         </p>
                       )}
                     </div>

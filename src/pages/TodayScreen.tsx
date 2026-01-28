@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   Droplets,
   Utensils,
@@ -10,6 +11,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { usePlantStore } from '@/store/plantStore';
+import { getPlantsDashboard } from '@/api/api';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 const TASK_ICONS = {
   water: Droplets,
@@ -28,6 +31,20 @@ const DUE_LABELS = {
 export default function TodayScreen() {
   const { tasks, completeTask } = usePlantStore();
 
+  // Fetch plants from API for recommendations
+  const {
+    data: plantsResponse,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['plants', 'dashboard'],
+    queryFn: async () => {
+      const response = await getPlantsDashboard();
+      return response.data;
+    },
+  });
+
   const pendingTasks = tasks.filter((t) => !t.completed);
   const todayCount = pendingTasks.filter((t) => t.dueDate === 'today').length;
 
@@ -36,6 +53,32 @@ export default function TodayScreen() {
     tomorrow: pendingTasks.filter((t) => t.dueDate === 'tomorrow'),
     soon: pendingTasks.filter((t) => t.dueDate === 'soon'),
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <section className="glass-card p-4">
+          <LoadingSpinner />
+        </section>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-4">
+        <section className="glass-card p-4">
+          <div className="text-center py-8 text-muted-foreground">
+            <AlertTriangle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p className="font-medium text-foreground">Ошибка загрузки данных</p>
+            <p className="text-sm mt-1">
+              {error instanceof Error ? error.message : 'Не удалось загрузить данные'}
+            </p>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
